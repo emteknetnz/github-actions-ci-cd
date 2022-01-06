@@ -57,26 +57,26 @@ on:
         default: true
 
 jobs:
-  context:
-    name: Context
-    runs-on: ubuntu-latest
-    steps:
-      - name: Context
-        run: |
-          # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
-          echo "github.base_ref: ${{ github.base_ref }}"
-          echo "github.event_name: ${{ github.event_name }}"
-          echo "github.head_ref: ${{ github.head_ref }}"
-          echo "github.ref: ${{ github.ref }}"
-          echo "github.ref_name: ${{ github.ref_name }}"
-          echo "github.ref_type: ${{ github.ref_type }}"
-          echo "github.repository: ${{ github.repository }}"
-          echo "github.sha: ${{ github.sha }}"
-          echo "job.status: ${{ job.status }}"
-          # https://docs.github.com/en/actions/learn-github-actions/events-that-trigger-workflows
-          echo "github.event.issue.pull_request: ${{ github.event.issue.pull_request }}"
-          echo "github.event.issue.number: ${{ github.event.issue.number }}"
-          echo "github.event.repository.name: ${{ github.event.repository.name }}"
+  # context:
+  #   name: Context
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Context
+  #       run: |
+  #         # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
+  #         echo "github.base_ref: ${{ github.base_ref }}"
+  #         echo "github.event_name: ${{ github.event_name }}"
+  #         echo "github.head_ref: ${{ github.head_ref }}"
+  #         echo "github.ref: ${{ github.ref }}"
+  #         echo "github.ref_name: ${{ github.ref_name }}"
+  #         echo "github.ref_type: ${{ github.ref_type }}"
+  #         echo "github.repository: ${{ github.repository }}"
+  #         echo "github.sha: ${{ github.sha }}"
+  #         echo "job.status: ${{ job.status }}"
+  #         # https://docs.github.com/en/actions/learn-github-actions/events-that-trigger-workflows
+  #         echo "github.event.issue.pull_request: ${{ github.event.issue.pull_request }}"
+  #         echo "github.event.issue.number: ${{ github.event.issue.number }}"
+  #         echo "github.event.repository.name: ${{ github.event.repository.name }}"
 
   # used to generate a dynamic jobs matrix
   genmatrix:
@@ -96,7 +96,6 @@ jobs:
           run_phplinting: ${{ inputs.run_phplinting }}
           run_phpunit: ${{ inputs.run_phpunit }}
           run_js: ${{ inputs.run_js }}
-        # TODO: does the output from the action automatically appear?
 
   tests:
     runs-on: ubuntu-latest
@@ -221,6 +220,8 @@ jobs:
           key: shared-composer-cache
 
       - name: Composer
+        env:
+          COMPOSER_REQURE_EXTRA: ${{ inputs.composer_require_extra }}
         run: |
           # Update composer.json and install dependencies
           # github.base_ref is only available on pull-requests and is the target branch
@@ -265,8 +266,9 @@ jobs:
           if [ ${{ matrix.phplinting }} ]; then
             composer require silverstripe/cow:dev-master --dev --no-update
           fi
-          if [ "${{ inputs.composer_require_extra }}" != "" ]; then
-            composer require ${{ inputs.composer_require_extra }} --no-update
+          if [ "$COMPOSER_REQUIRE_EXTRA" != "" ]; then
+            # TODO: test that requiring multiple modules seperated with a space here works
+            composer require $COMPOSER_REQUIRE_EXTRA --no-update
           fi
           cat composer.json
 
