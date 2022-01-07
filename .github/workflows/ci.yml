@@ -57,26 +57,26 @@ on:
         default: true
 
 jobs:
-  # context:
-  #   name: Context
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Context
-  #       run: |
-  #         # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
-  #         echo "github.base_ref: ${{ github.base_ref }}"
-  #         echo "github.event_name: ${{ github.event_name }}"
-  #         echo "github.head_ref: ${{ github.head_ref }}"
-  #         echo "github.ref: ${{ github.ref }}"
-  #         echo "github.ref_name: ${{ github.ref_name }}"
-  #         echo "github.ref_type: ${{ github.ref_type }}"
-  #         echo "github.repository: ${{ github.repository }}"
-  #         echo "github.sha: ${{ github.sha }}"
-  #         echo "job.status: ${{ job.status }}"
-  #         # https://docs.github.com/en/actions/learn-github-actions/events-that-trigger-workflows
-  #         echo "github.event.issue.pull_request: ${{ github.event.issue.pull_request }}"
-  #         echo "github.event.issue.number: ${{ github.event.issue.number }}"
-  #         echo "github.event.repository.name: ${{ github.event.repository.name }}"
+  context:
+    name: Context
+    runs-on: ubuntu-latest
+    steps:
+      - name: Context
+        run: |
+          # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
+          echo "github.base_ref: ${{ github.base_ref }}"
+          echo "github.event_name: ${{ github.event_name }}"
+          echo "github.head_ref: ${{ github.head_ref }}"
+          echo "github.ref: ${{ github.ref }}"
+          echo "github.ref_name: ${{ github.ref_name }}"
+          echo "github.ref_type: ${{ github.ref_type }}"
+          echo "github.repository: ${{ github.repository }}"
+          echo "github.sha: ${{ github.sha }}"
+          echo "job.status: ${{ job.status }}"
+          # https://docs.github.com/en/actions/learn-github-actions/events-that-trigger-workflows
+          echo "github.event.issue.pull_request: ${{ github.event.issue.pull_request }}"
+          echo "github.event.issue.number: ${{ github.event.issue.number }}"
+          echo "github.event.repository.name: ${{ github.event.repository.name }}"
 
   # used to generate a dynamic jobs matrix
   genmatrix:
