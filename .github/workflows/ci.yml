@@ -300,6 +300,10 @@ jobs:
           # Likely because the /tmp/silverstripe-cache-php7.4.xyz... dir being out of sync with TestOnly objects
           # If dev/build flush is needed here then delete the silverstripe-cache dir afterwards
 
+      - name: Debug
+        run: |
+          echo "matrix.phpunit: ${{ matrix.phpunit }}"
+
       - name: Run tests
         uses: emteknetnz/gha-run-tests@main
         with:
