@@ -228,7 +228,7 @@ jobs:
           # TODO: ^ confirm if this is prefixed with refs/heads/
           # github.ref_name is used for regular branch builds such as crons - it is NOT prefixed with refs/heads/
           # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
-          BRANCH=$(php -r "echo preg_replace('#^pulls/([0-9\.]+)/.+\$#', '\$1', '${{ github.base_ref }}'?:'${{ github.ref }}');")
+          BRANCH=$(php -r "echo preg_replace('#^pulls/([0-9\.]+)/.+\$#', '\$1', '${{ github.base_ref }}'?:'${{ github.ref_name }}');")
           if [[ "$BRANCH" =~ ^[1-9]$ ]] || [[ "$BRANCH" =~ ^[1-9]\.[0-9]+$ ]]; then export COMPOSER_ROOT_VERSION="${BRANCH}.x-dev"; elif [[ "$BRANCH" =~ ^[1-9]\.[0-9]+\.[0-9]+ ]]; then export COMPOSER_ROOT_VERSION="${BRANCH}"; else export COMPOSER_ROOT_VERSION="dev-${BRANCH}"; fi
           echo "BRANCH is $BRANCH"
           echo "COMPOSER_ROOT_VERSION is $COMPOSER_ROOT_VERSION"
