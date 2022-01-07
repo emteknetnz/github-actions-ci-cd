@@ -221,12 +221,12 @@ jobs:
 
       - name: Composer
         env:
-          COMPOSER_REQURE_EXTRA: ${{ inputs.composer_require_extra }}
+          COMPOSER_REQUIRE_EXTRA: ${{ inputs.composer_require_extra }}
         run: |
           # Update composer.json and install dependencies
           # github.base_ref is only available on pull-requests and is the target branch
           # github.ref is used for regular branch builds such as crons
-          BRANCH=$(php -r "echo preg_replace('#^.+/#', '', '${{ github.base_ref }}'?:'${{ github.ref }}');")
+          BRANCH=$(php -r "echo preg_replace('#^pulls/([0-9\.]+)/.+$#', '$1', '${{ github.base_ref }}'?:'${{ github.ref }}');")
           if [[ "$BRANCH" =~ ^[1-9]$ ]] || [[ "$BRANCH" =~ ^[1-9]\.[0-9]+$ ]]; then export COMPOSER_ROOT_VERSION="${BRANCH}.x-dev"; elif [[ "$BRANCH" =~ ^[1-9]\.[0-9]+\.[0-9]+ ]]; then export COMPOSER_ROOT_VERSION="${BRANCH}"; else export COMPOSER_ROOT_VERSION="dev-${BRANCH}"; fi
           echo "COMPOSER_ROOT_VERSION is $COMPOSER_ROOT_VERSION"
 
@@ -300,128 +300,138 @@ jobs:
           # Likely because the /tmp/silverstripe-cache-php7.4.xyz... dir being out of sync with TestOnly objects
           # If dev/build flush is needed here then delete the silverstripe-cache dir afterwards
 
+      - name: Run tests
+        uses: emteknetnz/gha-run-tests@main
+        with:
+          phpunit: ${{ matrix.phpunit }}
+          phpunit_suite: ${{ matrix.phpunit_suite }}
+          endtoend: ${{ matrix.endtoend }}
+          js: ${{ matrix.js }}
+          phplinting: ${{ matrix.phplinting }}
+          phpcoverage: ${{ matrix.phpcoverage }}
+
       # All tests are contained in a single giant step, as opposed to many smaller steps with an 'if' yml condition,
       # so that the there are a bunch of irrelevant skipped steps e.g. skipping "Test endtoend" on a phpunit run
-      - name: Run tests
-        run: |
-          # Run the tests for the matrix entry
+      # - name: Run tests
+      #   run: |
+      #     # Run the tests for the matrix entry
 
-          if [ ${{ matrix.phpunit }} ]; then
-            if [ "${{ matrix.phpunit_suite }}" == "all" ]; then
-              vendor/bin/phpunit --verbose --colors=always
-            else
-              vendor/bin/phpunit --verbose --colors=always --testsuite ${{ matrix.phpunit_suite }}
-            fi
-            echo "Passed"
+      #     if [ ${{ matrix.phpunit }} ]; then
+      #       if [ "${{ matrix.phpunit_suite }}" == "all" ]; then
+      #         vendor/bin/phpunit --verbose --colors=always
+      #       else
+      #         vendor/bin/phpunit --verbose --colors=always --testsuite ${{ matrix.phpunit_suite }}
+      #       fi
+      #       echo "Passed"
 
-          elif [ ${{ matrix.endtoend }} ]; then
-            # Run behat tests
-            if [ ! -f behat.yml ]; then echo "behat.yml missing" && exit 1; fi
-            # this script will update behat.yml to work with headless chrome
-            cat << EOF > __behat_headless.yml
-          default:
-            suites: []
-            extensions:
-              SilverStripe\BehatExtension\MinkExtension:
-                default_session: facebook_web_driver
-                javascript_session: facebook_web_driver
-                facebook_web_driver:
-                  browser: chrome
-                  wd_host: "http://127.0.0.1:9515"
-                  capabilities:
-                    extra_capabilities:
-                      chromeOptions:
-                        args:
-                          # no esandbox is required to run chromium inside a container https://stackoverflow.com/a/59154049
-                          - "--no-sandbox"
-                          # run headless within container - removes the need for xvfb
-                          - "--headless"
-                          # disable gpu is often mentioned as fix after headless chrome suddenly breaks after an update
-                          # leaving it in just in case to prevent hard to diagnose errors later
-                          - "--disable-gpu"
-                browser_name: chrome
-              SilverStripe\BehatExtension\Extension:
-                screenshot_path: '%paths.base%/artifacts/screenshots'
-          EOF
-            cat << EOF > __behat.php
-            <?php
-            // use __behat_headless.yml as the main behat.yml file,
-            // though use 'suites' from the module behat.yml
-            \$a = trim(file_get_contents('__behat_headless.yml'));
-            \$b = file_get_contents('behat.yml');
-            preg_match("#(?s)  suites:(.+?)\n  [a-z]#", \$b, \$m);
-            if (!\$m) {
-                preg_match("#(?s)  suites: (.+?)\$#", \$b, \$m);
-            }
-            if (!\$m) {
-                echo "Could not match suites in behat.yml, cannot run behat\n\n";
-                die;
-            }
-            \$c = str_replace('suites: []', 'suites: ' . \$m[1], \$a);
-            file_put_contents('behat.yml', \$c);
-          EOF
-            php __behat.php
-            rm __behat.php
-            rm __behat_headless.yml
-            nohup sh -c "chromedriver" > /dev/null 2>&1 &
-            vendor/bin/behat --colors --strict
-            echo "Passed"
+      #     elif [ ${{ matrix.endtoend }} ]; then
+      #       # Run behat tests
+      #       if [ ! -f behat.yml ]; then echo "behat.yml missing" && exit 1; fi
+      #       # this script will update behat.yml to work with headless chrome
+      #       cat << EOF > __behat_headless.yml
+      #     default:
+      #       suites: []
+      #       extensions:
+      #         SilverStripe\BehatExtension\MinkExtension:
+      #           default_session: facebook_web_driver
+      #           javascript_session: facebook_web_driver
+      #           facebook_web_driver:
+      #             browser: chrome
+      #             wd_host: "http://127.0.0.1:9515"
+      #             capabilities:
+      #               extra_capabilities:
+      #                 chromeOptions:
+      #                   args:
+      #                     # no sandbox is required to run chromium inside a container https://stackoverflow.com/a/59154049
+      #                     - "--no-sandbox"
+      #                     # run headless within container - removes the need for xvfb
+      #                     - "--headless"
+      #                     # disable gpu is often mentioned as fix after headless chrome suddenly breaks after an update
+      #                     # leaving it in just in case to prevent hard to diagnose errors later
+      #                     - "--disable-gpu"
+      #           browser_name: chrome
+      #         SilverStripe\BehatExtension\Extension:
+      #           screenshot_path: '%paths.base%/artifacts/screenshots'
+      #     EOF
+      #       cat << EOF > __behat.php
+      #       <?php
+      #       // use __behat_headless.yml as the main behat.yml file,
+      #       // though use 'suites' from the module behat.yml
+      #       \$a = trim(file_get_contents('__behat_headless.yml'));
+      #       \$b = file_get_contents('behat.yml');
+      #       preg_match("#(?s)  suites:(.+?)\n  [a-z]#", \$b, \$m);
+      #       if (!\$m) {
+      #           preg_match("#(?s)  suites: (.+?)\$#", \$b, \$m);
+      #       }
+      #       if (!\$m) {
+      #           echo "Could not match suites in behat.yml, cannot run behat\n\n";
+      #           die;
+      #       }
+      #       \$c = str_replace('suites: []', 'suites: ' . \$m[1], \$a);
+      #       file_put_contents('behat.yml', \$c);
+      #     EOF
+      #       php __behat.php
+      #       rm __behat.php
+      #       rm __behat_headless.yml
+      #       nohup sh -c "chromedriver" > /dev/null 2>&1 &
+      #       vendor/bin/behat --colors --strict
+      #       echo "Passed"
 
-          elif [ ${{ matrix.js }} ]; then
-            # Run yarn test etc
-            if [ ! -f package.json ]; then echo "package.json missing" && exit 1; fi
-            wget https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh
-            php -r "if (hash_file('sha384', 'install.sh') === 'dd4b116a7452fc3bb8c0e410ceac27e19b0ba0f900fe2f91818a95c12e92130fdfb8170fec170b9fb006d316f6386f2b') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('install.sh'); } echo PHP_EOL;"
-            if [ ! -f install.sh ]; then echo "Cannot install nvm" && exit 1; fi
-            . install.sh
-            rm install.sh
-            export NVM_DIR="$HOME/.nvm"
-            # this loads nvm into the current terminal
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            if [ ! -f .nvmrc ]; then echo "Missing .nvmrc" && exit 1; fi
-            nvm install
-            nvm use
-            rm -rf client/dist
-            npm install -g yarn
-            yarn install --network-concurrency 1
-            if [ -d vendor/silverstripe/admin ]; then
-              cd vendor/silverstripe/admin
-              yarn install --network-concurrency 1
-              cd ../../..
-            fi
-            yarn run build
-            git diff-files --quiet -w --relative=client
-            git diff --name-status --relative=client
-            yarn run test
-            yarn run lint
-            echo "Passed"
+      #     elif [ ${{ matrix.js }} ]; then
+      #       # Run yarn test etc
+      #       if [ ! -f package.json ]; then echo "package.json missing" && exit 1; fi
+      #       wget https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh
+      #       php -r "if (hash_file('sha384', 'install.sh') === 'dd4b116a7452fc3bb8c0e410ceac27e19b0ba0f900fe2f91818a95c12e92130fdfb8170fec170b9fb006d316f6386f2b') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('install.sh'); } echo PHP_EOL;"
+      #       if [ ! -f install.sh ]; then echo "Cannot install nvm" && exit 1; fi
+      #       . install.sh
+      #       rm install.sh
+      #       export NVM_DIR="$HOME/.nvm"
+      #       # this loads nvm into the current terminal
+      #       [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+      #       if [ ! -f .nvmrc ]; then echo "Missing .nvmrc" && exit 1; fi
+      #       nvm install
+      #       nvm use
+      #       rm -rf client/dist
+      #       npm install -g yarn
+      #       yarn install --network-concurrency 1
+      #       if [ -d vendor/silverstripe/admin ]; then
+      #         cd vendor/silverstripe/admin
+      #         yarn install --network-concurrency 1
+      #         cd ../../..
+      #       fi
+      #       yarn run build
+      #       git diff-files --quiet -w --relative=client
+      #       git diff --name-status --relative=client
+      #       yarn run test
+      #       yarn run lint
+      #       echo "Passed"
 
-          elif [ ${{ matrix.phplinting }} ]; then
-            # Run phpcs
-            if [ ! -f phpcs.xml.dist ]; then echo "Missing phpcs.xml.dist" && exit 1; fi
-            vendor/bin/phpcs
-            # phpstan is optional
-            if [ -f phpstan.neon.dist ]; then
-              vendor/bin/phpstan analyse
-            fi
-            # cow validation is also done here due to it being a tiny piece of work not meriting its own step
-            if [ -f .cow.json ]; then
-              vendor/bin/cow schema:validate
-            fi
-            echo "Passed"
+      #     elif [ ${{ matrix.phplinting }} ]; then
+      #       # Run phpcs
+      #       if [ ! -f phpcs.xml.dist ]; then echo "Missing phpcs.xml.dist" && exit 1; fi
+      #       vendor/bin/phpcs
+      #       # phpstan is optional
+      #       if [ -f phpstan.neon.dist ]; then
+      #         vendor/bin/phpstan analyse
+      #       fi
+      #       # cow validation is also done here due to it being a tiny piece of work not meriting its own step
+      #       if [ -f .cow.json ]; then
+      #         vendor/bin/cow schema:validate
+      #       fi
+      #       echo "Passed"
 
-          elif [ ${{ matrix.phpcoverage }} ]; then
-            curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import
-            curl -Os https://uploader.codecov.io/latest/codecov-linux
-            curl -Os https://uploader.codecov.io/latest/codecov-linux.SHA256SUM
-            curl -Os https://uploader.codecov.io/latest/codecov-linux.SHA256SUM.sig
-            gpg --verify codecov-linux.SHA256SUM.sig codecov-linux.SHA256SUM
-            shasum -a 256 -c codecov-linux.SHA256SUM
-            chmod +x codecov-linux
-            phpdbg -qrr vendor/bin/phpunit --coverage-clover=coverage.xml
-            ./codecov-linux -f coverage.xml;
-            echo "coverage.xml generated and uploaded to codecov"
-          fi
+      #     elif [ ${{ matrix.phpcoverage }} ]; then
+      #       curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import
+      #       curl -Os https://uploader.codecov.io/latest/codecov-linux
+      #       curl -Os https://uploader.codecov.io/latest/codecov-linux.SHA256SUM
+      #       curl -Os https://uploader.codecov.io/latest/codecov-linux.SHA256SUM.sig
+      #       gpg --verify codecov-linux.SHA256SUM.sig codecov-linux.SHA256SUM
+      #       shasum -a 256 -c codecov-linux.SHA256SUM
+      #       chmod +x codecov-linux
+      #       phpdbg -qrr vendor/bin/phpunit --coverage-clover=coverage.xml
+      #       ./codecov-linux -f coverage.xml;
+      #       echo "coverage.xml generated and uploaded to codecov"
+      #     fi
 
       - name: Copy artifacts
         if: always()
