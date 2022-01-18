@@ -316,6 +316,7 @@ jobs:
           phpunit: ${{ matrix.phpunit }}
           phpunit_suite: ${{ matrix.phpunit_suite }}
           endtoend: ${{ matrix.endtoend }}
+          endtoend_suite: ${{ matrix.endtoend_suite }}
           js: ${{ matrix.js }}
           phplinting: ${{ matrix.phplinting }}
           phpcoverage: ${{ matrix.phpcoverage }}
