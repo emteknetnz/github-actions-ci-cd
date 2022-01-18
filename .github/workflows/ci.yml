@@ -136,6 +136,8 @@ jobs:
           coverage: xdebug
         # While this should be the correct way to allow forks in composer.json repositories
         # in practice there are still many sporadic "Could not authenticate against github.com" errors
+        # there's 1,000 requests per hour limit when using this token, likely it get exceeded
+        # fairly easily when using a fork with multiple jobs in a matrix
         #env:
         #  COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
