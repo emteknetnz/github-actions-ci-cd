@@ -134,6 +134,9 @@ jobs:
           extensions: curl, dom, gd, intl, json, ldap, mbstring, mysql, tidy, xdebug, zip
           tools: composer:v2
           coverage: xdebug
+        env:
+          # Adding COMPOSER_TOKEN allows the use of forks in composer.json repositories
+          COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure PHP
         run: |
