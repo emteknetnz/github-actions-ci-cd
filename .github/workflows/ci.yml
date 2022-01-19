@@ -303,11 +303,15 @@ jobs:
 
           # Artifacts directory must be created after composer install as it would remove the artifacts directory
           mkdir artifacts
-          # Shouldn't dev/build flush here
+          
+          # run dev/build flush to help debug any issues (though it's not strictly required here)
+          vendor/bin/sake dev/build flush=1
+          
+          # Delete the silverstripe-cache dir - it will automatically recreate when needed
           # There were issues with a unit test getting the following issue
           # Identifier name 'SilverStripe_CampaignAdmin_Tests_AddToCampaignValidatorTest_TestObject' is too long
           # Likely because the /tmp/silverstripe-cache-php7.4.xyz... dir being out of sync with TestOnly objects
-          # If dev/build flush is needed here then delete the silverstripe-cache dir afterwards
+          rm -rf $(find /tmp -maxdepth 1 | grep silverstripe-cache)
 
       - name: Debug
         run: |
