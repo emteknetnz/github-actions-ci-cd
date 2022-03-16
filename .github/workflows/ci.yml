@@ -244,7 +244,7 @@ jobs:
           PHPUNIT9=$(php -r '$rd=json_decode(file_get_contents("composer.json"))->{"require-dev"};$pu=$rd->{"phpunit/phpunit"}??"";$rt=$rd->{"silverstripe/recipe-testing"}??"";echo ($pu=="^9"||$pu=="^9.5"||$rt=="^2")?1:0;')
           echo "PHPUNIT9 is $PHPUNIT9"
           if [ $PHPUNIT9 == 1 ]; then
-            php -r "\$j=json_decode(file_get_contents('composer.json'));\$j->replace=json_decode('{\"sminnee/phpunit\":\"*\",\"sminnee/phpunit-mock-objects\":\"*\"}');file_put_contents('composer.json', json_encode(\$j, JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES));"
+            php -r "\$j=json_decode(file_get_contents('composer.json'));if(!property_exists(\$j,'replace')){\$j->replace=new stdClass();};\$j->replace->{'sminnee/phpunit'}='*';\$j->replace->{'sminnee/phpunit-mock-objects'}='*';file_put_contents('composer.json',json_encode(\$j, JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES));"
           fi
 
           # Require silverstripe/installer for non-recipe and all but a few modules
