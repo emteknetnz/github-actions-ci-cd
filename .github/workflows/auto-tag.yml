@@ -1,6 +1,7 @@
-# Runs on the github-actions-ci-cd module to automatically delete and re-release tags
-# as ^ requirements are not supposed e.g. # @^2 won't work unfortunately
-# Will release v2 when 2.5.0 is released and v0.3 when 0.3.5 is released
+# Non-shared workflow that only runs on the github-actions-ci-cd module to automatically
+# delete and re-release tags so that other modules can use something similar to carets (^)
+# Caret (^) requirements are not supported by github-action e.g. @^2 does not work
+# The action will release v2 when 2.5.0 is released and v0.3 when 0.3.5 is released
 # Using the 'v' prefix to avoid confusion with the '2' branch naming convention that Silverstripe uses
 
 on:
@@ -9,8 +10,8 @@ on:
       - '*.*.*'
 
 jobs:
-  action-tag:
-    name: Action tag
+  auto-tag-self:
+    name: Auto-tag
     runs-on: ubuntu-latest
     steps:
       - name: Action tag
