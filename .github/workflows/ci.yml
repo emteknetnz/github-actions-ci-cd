@@ -309,7 +309,7 @@ jobs:
           # normal module
           if [ -f vendor/bin/sake ]; then vendor/bin/sake dev/build flush=1; fi
           # framework module
-          if [ -f sake ]; then sake dev/build flush=1; fi
+          if [ -f sake ]; then ./sake dev/build flush=1; fi
           
           # Delete the silverstripe-cache dir - it will automatically recreate when needed
           # There were issues with a unit test getting the following issue
