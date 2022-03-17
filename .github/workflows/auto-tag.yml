@@ -37,6 +37,6 @@ jobs:
         uses: emteknetnz/gha-tag-release@main
         with:
           sha: ${{ github.sha }}
-          tag: ${{ steps.generate_tag.output.tag }}
+          tag: ${{ steps.generate_tag.outputs.tag }}
           delete_existing: true
           release: false
