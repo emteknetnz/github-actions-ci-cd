@@ -16,7 +16,8 @@ jobs:
     name: Auto-tag
     runs-on: ubuntu-latest
     steps:
-      - name: Action tag
+      - name: Generate tag
+        id: generate_tag
         run: |
           # refs/tags/0.1.23 => 0.1.23
           TAG=$(echo ${{ github.ref }} | cut -c 11-)
@@ -28,22 +29,15 @@ jobs:
             if [ "$MAJOR" == "0" ]; then
               NEW_TAG=("v${MAJOR}.${MINOR}")
             fi
-            # Delete old tag via GitHub API
-            echo "Attempting to delete old $NEW_TAG tag (it may not exist yet)"
-            curl -s \
-            -X DELETE https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$NEW_TAG \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}"
-            # Create new tag via GitHub API
-            echo "Create new tag $NEW_TAG"
-            curl -s \
-            -X POST https://api.github.com/repos/${{ github.repository }}/git/refs \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -d @- << EOF
-            {
-              "ref": "refs/tags/$NEW_TAG",
-              "sha": "${{ github.sha }}"
-            }
-          EOF
+            echo "::set-output name=tag::$NEW_TAG"
+          else
+            echo "Tag does not match x.y.z" && exit 1
           fi
+      - name: Action tag
+        if: ${{ steps.generate_tag.output.tag }}
+        uses: emteknetnz/gha-tag-release@main
+        with:
+          sha: ${{ github.sha }}
+          tag: ${{ steps.generate_tag.output.tag }}
+          delete_existing: true
+          release: false
