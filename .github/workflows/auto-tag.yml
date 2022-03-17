@@ -23,7 +23,7 @@ jobs:
           TAG=$(echo ${{ github.ref }} | cut -c 11-)
           NEW_TAG=
           if ! [[ $TAG =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-            echo "Tag does not match x.y.z, will not continue"
+            echo "Tag does not match x.y.z, exiting" && exit 1
           else
             MAJOR="${BASH_REMATCH[1]}"
             MINOR="${BASH_REMATCH[2]}"
@@ -36,7 +36,7 @@ jobs:
           fi
           echo "::set-output name=tag::$NEW_TAG"
       - name: Action tag
-        if: ${{ steps.generate_tag.output.tag != '' }}
+        # if: ${{ steps.generate_tag.output.tag != '' }}
         uses: emteknetnz/gha-tag-release@main
         with:
           sha: ${{ github.sha }}
