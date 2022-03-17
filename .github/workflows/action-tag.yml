@@ -1,3 +1,9 @@
+
+
+# THIS IS OLD AND HAS BEEN REPLACED BY auto-tag on the main branch
+
+
+
 # Runs on the github-actions-ci-cd module to automatically delete and re-release tags
 # as ^ requirements are not supposed e.g. # @^2 won't work unfortunately
 # Will release v2 when 2.5.0 is released and v0.3 when 0.3.5 is released
