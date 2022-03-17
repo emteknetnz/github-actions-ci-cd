@@ -21,10 +21,8 @@ jobs:
         run: |
           # refs/tags/0.1.23 => 0.1.23
           TAG=$(echo ${{ github.ref }} | cut -c 11-)
-          NEW_TAG=
-          if ! [[ $TAG =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-            echo "Tag does not match x.y.z, exiting" && exit 1
-          else
+          # This will always match because of the on.push.tags *.*.* filter
+          if [[ $TAG =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
             MAJOR="${BASH_REMATCH[1]}"
             MINOR="${BASH_REMATCH[2]}"
             PATCH="${BASH_REMATCH[3]}"
@@ -33,10 +31,9 @@ jobs:
               NEW_TAG=("v${MAJOR}.${MINOR}")
             fi
             echo "Tag is $NEW_TAG"
+            echo "::set-output name=tag::$NEW_TAG"
           fi
-          echo "::set-output name=tag::$NEW_TAG"
       - name: Action tag
-        # if: ${{ steps.generate_tag.output.tag != '' }}
         uses: emteknetnz/gha-tag-release@main
         with:
           sha: ${{ github.sha }}
