@@ -152,9 +152,9 @@ jobs:
           # Assign less memory for behat tests so that chrome has plenty of memory available
           if [ ${{ matrix.endtoend }} ]; then PHP_MEMORY_LIMIT=4096M; fi
           echo "PHP_MEMORY_LIMIT is $PHP_MEMORY_LIMIT"
-          sudo sh -c "echo 'memory_limit = $PHP_MEMORY_LIMIT' >> /etc/php/$PHPV/cli/php.ini"
-          if [ -f /etc/php/$PHPV/apache2/php.ini ]; then
-            sudo sh -c "echo 'memory_limit = $PHP_MEMORY_LIMIT' >> /etc/php/$PHPV/apache2/php.ini"
+          sudo sh -c "echo 'memory_limit = $PHP_MEMORY_LIMIT' >> /etc/php/${{ matrix.php }}/cli/php.ini"
+          if [ -f /etc/php/${{ matrix.php }}/apache2/php.ini ]; then
+            sudo sh -c "echo 'memory_limit = $PHP_MEMORY_LIMIT' >> /etc/php/${{ matrix.php }}/apache2/php.ini"
           fi
           # Disable xdebug which greatly slow down unit testing
           # Note: omitting xdebug from shivammathur/setup-php still results in xdebug being installed and enabled
