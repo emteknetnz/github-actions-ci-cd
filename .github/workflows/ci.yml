@@ -288,6 +288,9 @@ jobs:
           fi
           cat composer.json
 
+          # Enable plugins - recipe + vendor plugin are already allowed via installer composer.json
+          composer config --no-plugins allow-plugins.composer/installers true
+
           # Installing using --prefer-source for recipes + some modules that run other unit-tests in other modules
           composer update --prefer-source --no-interaction --no-progress ${{ matrix.composer_arg }}
 
