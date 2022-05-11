@@ -289,9 +289,9 @@ jobs:
           cat composer.json
 
           # Enable plugins
-          composer config --no-plugins allow-plugins.composer/installers true
-          composer config --no-plugins allow-plugins.silverstripe/recipe-plugin true
-          composer config --no-plugins allow-plugins.silverstripe/vendor-plugin true
+          composer config allow-plugins.composer/installers true
+          composer config allow-plugins.silverstripe/recipe-plugin true
+          composer config allow-plugins.silverstripe/vendor-plugin true
 
           # Installing using --prefer-source for recipes + some modules that run other unit-tests in other modules
           composer update --prefer-source --no-interaction --no-progress ${{ matrix.composer_arg }}
