@@ -286,12 +286,14 @@ jobs:
             # TODO: test that requiring multiple modules seperated with a space here works
             composer require $COMPOSER_REQUIRE_EXTRA --no-update
           fi
-          cat composer.json
 
           # Enable plugins
           composer config allow-plugins.composer/installers true
           composer config allow-plugins.silverstripe/recipe-plugin true
           composer config allow-plugins.silverstripe/vendor-plugin true
+          
+          #
+          cat composer.json
 
           # Installing using --prefer-source for recipes + some modules that run other unit-tests in other modules
           composer update --prefer-source --no-interaction --no-progress ${{ matrix.composer_arg }}
