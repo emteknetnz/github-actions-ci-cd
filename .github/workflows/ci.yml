@@ -1,26 +1,3 @@
-# https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions
-# https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
-# https://docs.github.com/en/actions/learn-github-actions/reusing-workflows
-
-# TODO - functionality
-# - [ ] job to validate/sanitize inputs
-
-# TODO - readme
-# - [ ] how to do cron on modules
-
-# TODO - dynmaic matrix
-# - [ ] matrix entry for graphql3 vs 4 for behat
-# - [ ] PDO matrix entry
-# - [ ] PGSQL matrix entry
-# - [ ] --prefer-lowest
-
-# TODO - optimisations
-# - [ ] npm cache (similar to composer cache)
-# - [ ] tidy-up of heredocs / temporary inline php files
-# - [ ] behat green/red colours in output, also phpunit?
-# - [ ] consider getting rid of apache and use serve.php for behat since it'll run the job faster and it simplies this file (though behat will always be slow)
-# - [ ] consider splitting code into multiple yml files / repos
-
 name: ci
 
 on:
@@ -57,28 +34,7 @@ on:
         default: true
 
 jobs:
-  context:
-    name: Context
-    runs-on: ubuntu-latest
-    steps:
-      - name: Context
-        run: |
-          # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
-          echo "github.base_ref: ${{ github.base_ref }}"
-          echo "github.event_name: ${{ github.event_name }}"
-          echo "github.head_ref: ${{ github.head_ref }}"
-          echo "github.ref: ${{ github.ref }}"
-          echo "github.ref_name: ${{ github.ref_name }}"
-          echo "github.ref_type: ${{ github.ref_type }}"
-          echo "github.repository: ${{ github.repository }}"
-          echo "github.sha: ${{ github.sha }}"
-          echo "job.status: ${{ job.status }}"
-          # https://docs.github.com/en/actions/learn-github-actions/events-that-trigger-workflows
-          echo "github.event.issue.pull_request: ${{ github.event.issue.pull_request }}"
-          echo "github.event.issue.number: ${{ github.event.issue.number }}"
-          echo "github.event.repository.name: ${{ github.event.repository.name }}"
 
-  # used to generate a dynamic jobs matrix
   genmatrix:
     name: Generate matrix
     runs-on: ubuntu-latest
@@ -97,26 +53,60 @@ jobs:
           run_phpunit: ${{ inputs.run_phpunit }}
           run_js: ${{ inputs.run_js }}
 
+  createjoblabel:
+    name: Create job label
+    needs: genmatrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.create-job-label.outputs.label }}
+    steps:
+      - name: Create job label
+        id: create-job-label
+        run: |
+          echo $(which php)
+          echo $(php -v)
+          echo $(which python)
+          echo $(python -v)
+          LABEL=todo
+          exit 1
+          echo "::set-output name=label::$LABEL"
+
   tests:
+    needs: [genmatrix, createjoblabel]
+
+    strategy:
+      # set fail-fast to false prevent one job from cancelling other jobs
+      fail-fast: false
+      matrix: ${{fromJson(needs.genmatrix.outputs.matrix)}}
+
     runs-on: ubuntu-latest
 
     services:
-      mysql:
+      mysql57:
         image: mysql:5.7
         env:
           MYSQL_HOST: 127.0.0.1
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: SS_mysite
         ports:
-          - 3306:3306
+          - 3357:3306
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-
-    needs: genmatrix
-
-    strategy:
-      # set fail-fast to false prevent one job from cancelling other jobs
-      fail-fast: false
-      matrix: ${{fromJson(needs.genmatrix.outputs.matrix)}}
+      mysql80:
+        image: mysql:8.0
+        env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: SS_mysite
+        ports:
+          - 3380:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=5
+        ports:
+          - 5432:5432
 
     env:
       artifacts_name: php${{ matrix.php }}_${{ matrix.phpunit && 'phpunit - ' && matrix.phpunit_suite || '' }}${{ matrix.endtoend && ' - endtoend - ' || '' }}${{ matrix.endtoend && matrix.endtoend_suite || '' }}${{ matrix.js && 'js' || '' }}${{ matrix.phpcoverage && 'phpcoverage' || '' }}${{ matrix.phplinting && 'phplinting' || '' }}
@@ -125,21 +115,22 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v2#7884fcad6b5d53d10323aee724dc68d8b9096a2e
 
       - name: Install PHP
-        uses: shivammathur/setup-php@v2
+        # SHA will need to be updated to support new php version when they are released
+        uses: shivammathur/setup-php@v2#6cba851606e69e00775ebccba68bc1d418b6fa44
         with:
           php-version: ${{ matrix.php }}
           extensions: curl, dom, gd, intl, json, ldap, mbstring, mysql, tidy, xdebug, zip
           tools: composer:v2
           coverage: xdebug
-        # While this should be the correct way to allow forks in composer.json repositories
-        # in practice there are still many sporadic "Could not authenticate against github.com" errors
-        # there's 1,000 requests per hour limit when using this token, likely it get exceeded
-        # fairly easily when using a fork with multiple jobs in a matrix
-        #env:
-        #  COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # While this should be the correct way to allow forks in composer.json repositories
+          # in practice there are still many sporadic "Could not authenticate against github.com" errors
+          # there's 1,000 requests per hour limit when using this token, likely it get exceeded
+          # fairly easily when using a fork with multiple jobs in a matrix
+          #env:
+          # COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure PHP
         run: |
@@ -227,7 +218,7 @@ jobs:
       # need to download requirements for the first time, after that it will be plenty quick
       # https://docs.github.com/en/actions/advanced-guides/caching-dependencies-to-speed-up-workflows
       - name: Enable shared composer cache
-        uses: actions/cache@v2
+        uses: actions/cache@v2#937d24475381cd9c75ae6db12cb4e79714b926ed
         with:
           path: ~/.cache/composer
           key: shared-composer-cache
@@ -305,6 +296,7 @@ jobs:
           SS_ENVIRONMENT_TYPE="dev"
           SS_DATABASE_CLASS="MySQLDatabase"
           SS_DATABASE_SERVER="127.0.0.1"
+          SS_DATABASE_PORT="${{ matrix.db_port }}"
           SS_DATABASE_USERNAME="root"
           SS_DATABASE_PASSWORD="root"
           SS_DATABASE_NAME="SS_mysite"
@@ -346,129 +338,6 @@ jobs:
           phplinting: ${{ matrix.phplinting }}
           phpcoverage: ${{ matrix.phpcoverage }}
 
-      # All tests are contained in a single giant step, as opposed to many smaller steps with an 'if' yml condition,
-      # so that the there are a bunch of irrelevant skipped steps e.g. skipping "Test endtoend" on a phpunit run
-      # - name: Run tests
-      #   run: |
-      #     # Run the tests for the matrix entry
-
-      #     if [ ${{ matrix.phpunit }} ]; then
-      #       if [ "${{ matrix.phpunit_suite }}" == "all" ]; then
-      #         vendor/bin/phpunit --verbose --colors=always
-      #       else
-      #         vendor/bin/phpunit --verbose --colors=always --testsuite ${{ matrix.phpunit_suite }}
-      #       fi
-      #       echo "Passed"
-
-      #     elif [ ${{ matrix.endtoend }} ]; then
-      #       # Run behat tests
-      #       if [ ! -f behat.yml ]; then echo "behat.yml missing" && exit 1; fi
-      #       # this script will update behat.yml to work with headless chrome
-      #       cat << EOF > __behat_headless.yml
-      #     default:
-      #       suites: []
-      #       extensions:
-      #         SilverStripe\BehatExtension\MinkExtension:
-      #           default_session: facebook_web_driver
-      #           javascript_session: facebook_web_driver
-      #           facebook_web_driver:
-      #             browser: chrome
-      #             wd_host: "http://127.0.0.1:9515"
-      #             capabilities:
-      #               extra_capabilities:
-      #                 chromeOptions:
-      #                   args:
-      #                     # no sandbox is required to run chromium inside a container https://stackoverflow.com/a/59154049
-      #                     - "--no-sandbox"
-      #                     # run headless within container - removes the need for xvfb
-      #                     - "--headless"
-      #                     # disable gpu is often mentioned as fix after headless chrome suddenly breaks after an update
-      #                     # leaving it in just in case to prevent hard to diagnose errors later
-      #                     - "--disable-gpu"
-      #           browser_name: chrome
-      #         SilverStripe\BehatExtension\Extension:
-      #           screenshot_path: '%paths.base%/artifacts/screenshots'
-      #     EOF
-      #       cat << EOF > __behat.php
-      #       <?php
-      #       // use __behat_headless.yml as the main behat.yml file,
-      #       // though use 'suites' from the module behat.yml
-      #       \$a = trim(file_get_contents('__behat_headless.yml'));
-      #       \$b = file_get_contents('behat.yml');
-      #       preg_match("#(?s)  suites:(.+?)\n  [a-z]#", \$b, \$m);
-      #       if (!\$m) {
-      #           preg_match("#(?s)  suites: (.+?)\$#", \$b, \$m);
-      #       }
-      #       if (!\$m) {
-      #           echo "Could not match suites in behat.yml, cannot run behat\n\n";
-      #           die;
-      #       }
-      #       \$c = str_replace('suites: []', 'suites: ' . \$m[1], \$a);
-      #       file_put_contents('behat.yml', \$c);
-      #     EOF
-      #       php __behat.php
-      #       rm __behat.php
-      #       rm __behat_headless.yml
-      #       nohup sh -c "chromedriver" > /dev/null 2>&1 &
-      #       vendor/bin/behat --colors --strict
-      #       echo "Passed"
-
-      #     elif [ ${{ matrix.js }} ]; then
-      #       # Run yarn test etc
-      #       if [ ! -f package.json ]; then echo "package.json missing" && exit 1; fi
-      #       wget https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh
-      #       php -r "if (hash_file('sha384', 'install.sh') === 'dd4b116a7452fc3bb8c0e410ceac27e19b0ba0f900fe2f91818a95c12e92130fdfb8170fec170b9fb006d316f6386f2b') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('install.sh'); } echo PHP_EOL;"
-      #       if [ ! -f install.sh ]; then echo "Cannot install nvm" && exit 1; fi
-      #       . install.sh
-      #       rm install.sh
-      #       export NVM_DIR="$HOME/.nvm"
-      #       # this loads nvm into the current terminal
-      #       [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-      #       if [ ! -f .nvmrc ]; then echo "Missing .nvmrc" && exit 1; fi
-      #       nvm install
-      #       nvm use
-      #       rm -rf client/dist
-      #       npm install -g yarn
-      #       yarn install --network-concurrency 1
-      #       if [ -d vendor/silverstripe/admin ]; then
-      #         cd vendor/silverstripe/admin
-      #         yarn install --network-concurrency 1
-      #         cd ../../..
-      #       fi
-      #       yarn run build
-      #       git diff-files --quiet -w --relative=client
-      #       git diff --name-status --relative=client
-      #       yarn run test
-      #       yarn run lint
-      #       echo "Passed"
-
-      #     elif [ ${{ matrix.phplinting }} ]; then
-      #       # Run phpcs
-      #       if [ ! -f phpcs.xml.dist ]; then echo "Missing phpcs.xml.dist" && exit 1; fi
-      #       vendor/bin/phpcs
-      #       # phpstan is optional
-      #       if [ -f phpstan.neon.dist ]; then
-      #         vendor/bin/phpstan analyse
-      #       fi
-      #       # cow validation is also done here due to it being a tiny piece of work not meriting its own step
-      #       if [ -f .cow.json ]; then
-      #         vendor/bin/cow schema:validate
-      #       fi
-      #       echo "Passed"
-
-      #     elif [ ${{ matrix.phpcoverage }} ]; then
-      #       curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import
-      #       curl -Os https://uploader.codecov.io/latest/codecov-linux
-      #       curl -Os https://uploader.codecov.io/latest/codecov-linux.SHA256SUM
-      #       curl -Os https://uploader.codecov.io/latest/codecov-linux.SHA256SUM.sig
-      #       gpg --verify codecov-linux.SHA256SUM.sig codecov-linux.SHA256SUM
-      #       shasum -a 256 -c codecov-linux.SHA256SUM
-      #       chmod +x codecov-linux
-      #       phpdbg -qrr vendor/bin/phpunit --coverage-clover=coverage.xml
-      #       ./codecov-linux -f coverage.xml;
-      #       echo "coverage.xml generated and uploaded to codecov"
-      #     fi
-
       - name: Copy artifacts
         if: always()
         run: |
@@ -478,7 +347,7 @@ jobs:
           if [ ${{ matrix.endtoend }} ] && [ -f behat.yml ]; then cp behat.yml artifacts; fi
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v2#82c141cc518b40d92cc801eee768e7aafc9c2fa2
         if: always()
         with:
           name: ${{ env.artifacts_name }}
