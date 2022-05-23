@@ -1,3 +1,8 @@
+#
+# THIS HAS BEEN SUPERCEEDED
+# https://github.com/emteknetnz/gha-auto-tag/
+#
+
 # Non-shared workflow that only runs on the github-actions-ci-cd module to automatically
 # delete and re-release tags so that other modules can use something similar to carets (^)
 # Caret (^) requirements are not supported by github-action e.g. @^2 does not work
