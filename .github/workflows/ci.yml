@@ -63,11 +63,19 @@ jobs:
       - name: Create job label
         id: create-job-label
         run: |
-          echo $(which php)
-          echo $(php -v)
-          echo $(which python)
-          echo $(python -v)
-          LABEL=todo
+          echo ${{ fromJson(needs.genmatrix.outputs.matrix) }} > __matrix.json
+          cat << EOF > __create_label.php
+          <?php
+          \$s = 'my-label';
+          \$json = file_get_contents('__matrix.json');
+          print_r(\$json);
+          #\$pwd = rtrim(trim(shell_exec('pwd')), '/');
+          #\$s = file_get_contents('__000-default.conf');
+          #\$s = str_replace('PWD', \$pwd, \$s);
+          echo \$s;
+          EOF
+          LABEL=$(php __create_label.php)
+          echo "LABEL IS $LABEL"
           exit 1
           echo "::set-output name=label::$LABEL"
 
