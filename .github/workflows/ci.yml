@@ -54,7 +54,7 @@ jobs:
           run_js: ${{ inputs.run_js }}
 
   tests:
-    needs: [genmatrix, createjoblabel]
+    needs: genmatrix
 
     strategy:
       # set fail-fast to false prevent one job from cancelling other jobs
