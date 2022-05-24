@@ -116,6 +116,7 @@ jobs:
         ${{ matrix.js && 'js' || '' }}
         ${{ matrix.phpcoverage && 'phpcoverage' || '' }}
         ${{ matrix.phplinting && 'phplinting' || '' }}
+        ${{ matrix.composer_args == '--prefer-lowest' && ' - pl' || '' }}
 
     name: >-
       PHP ${{ matrix.php }}
@@ -127,6 +128,7 @@ jobs:
       ${{ matrix.js && 'js' || '' }}
       ${{ matrix.phpcoverage && 'phpcoverage' || '' }}
       ${{ matrix.phplinting && 'phplinting' || '' }}
+      ${{ matrix.composer_args == '--prefer-lowest' && ' - pl' || '' }}
 
     steps:
       - name: Checkout code
