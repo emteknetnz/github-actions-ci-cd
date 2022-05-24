@@ -292,10 +292,20 @@ jobs:
         run: |
           # Add .env file and create artifacts directory
           if [[ "${{ matrix.db }}" =~ mysql ]]; then
-            cat << EOF > .env
+            if [ "${{ matrix.db }}" == "mysql57pdo" ]; then
+              cat << EOF > .env
+          SS_DATABASE_CLASS="MySQLPDODatabase"
+          SS_DATABASE_PORT="3357"
+          else
+          EOF
+            else
+              cat << EOF > .env
           SS_DATABASE_CLASS="MySQLDatabase"
-          SS_DATABASE_SERVER="127.0.0.1"
           SS_DATABASE_PORT="${{ matrix.db == 'mysql57' && '3357' || '3380' }}"
+          EOF
+            fi
+            cat << EOF >> .env
+          SS_DATABASE_SERVER="127.0.0.1"
           SS_DATABASE_USERNAME="root"
           SS_DATABASE_PASSWORD="root"
           EOF
