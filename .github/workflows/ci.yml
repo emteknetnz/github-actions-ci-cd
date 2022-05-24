@@ -296,7 +296,6 @@ jobs:
               cat << EOF > .env
           SS_DATABASE_CLASS="MySQLPDODatabase"
           SS_DATABASE_PORT="3357"
-          else
           EOF
             else
               cat << EOF > .env
