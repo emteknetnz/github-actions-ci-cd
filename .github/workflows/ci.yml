@@ -40,6 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.generate-matrix.outputs.matrix }}
+    
     steps:
       - name: Generate matrix
         id: generate-matrix
@@ -73,6 +74,7 @@ jobs:
         ports:
           - 3357:3306
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+      # Takes around 9 seconds per extra database added, so this is something we could optimise later
       mysql80:
         image: mysql:8.0
         env:
@@ -226,8 +228,7 @@ jobs:
           COMPOSER_REQUIRE_EXTRA: ${{ inputs.composer_require_extra }}
         run: |
           # Update composer.json and install dependencies
-          # github.base_ref is only available on pull-requests and is the target branch
-          # TODO: ^ confirm if this is prefixed with refs/heads/
+          # github.base_ref is only available on pull-requests and is the target branch - is is NOT prefixed with refs/heads/
           # github.ref_name is used for regular branch builds such as crons - it is NOT prefixed with refs/heads/
           # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
           BRANCH=$(php -r "echo preg_replace('#^pulls/([0-9\.]+)/.+\$#', '\$1', '${{ github.base_ref }}'?:'${{ github.ref_name }}');")
@@ -244,32 +245,27 @@ jobs:
           fi
 
           # Require silverstripe/installer for non-recipe and all but a few modules
-          if ! [[ ${{ github.repository }} =~ /(recipe-|silverstripe-config|silverstripe-installer|vendor-plugin) ]]; then
-            INSTALLER_VERSION=4.x-dev
-            if [[ "$COMPOSER_ROOT_VERSION" =~ "x-dev" ]]; then INSTALLER_VERSION=$(php -r "echo preg_replace('/^[0-9]+/', '4', '$COMPOSER_ROOT_VERSION');"); fi
-            echo "INSTALLER_VERSION is $INSTALLER_VERSION"
-            composer require silverstripe/installer:$INSTALLER_VERSION --no-update
+          if ! [ -z "${{ matrix.installer_version }}" ]; then
+            composer require silverstripe/installer:${{ matrix.installer_version }} --no-update
           fi
           
           # Required for assets unit tests as well as recipes that run assets unit tests
           # Should technically be defined as composer_require_extra on individual modules, though easier just doing here
           composer require mikey179/vfsstream:^1 --dev --no-update
 
-          # require graphql 3 most of the time
-          # require graphql 4 for endtoend tests on php 8.0
+          # require graphql 4 most of the time
+          # require graphql 3 for endtoend tests on php 7.4
           if ! [[ ${{ github.repository }} =~ /graphql$ ]]; then
-            if [ ${{ matrix.endtoend }} ] && [ "${{ matrix.php }}" == "8.0" ]; then
-              composer require silverstripe/graphql:^4 --no-update
-            else
+            if [ ${{ matrix.endtoend }} ] && [ "${{ matrix.php }}" == "7.4" ]; then
               composer require silverstripe/graphql:^3 --no-update
+            else
+              composer require silverstripe/graphql:^4 --no-update
             fi
           fi
 
-          # postgres
-          if [ "${{ matrix.db }}" == "pgsql" ] && ! [ "${{ github.repository }}" == "silverstripe/silverstripe-postgresql" ]; then
+          if [ "${{ matrix.db }}" == "pgsql" ] && ! [[ "${{ github.repository }}" =~ /postgresql ]]; then
             composer require silverstripe/postgresql:^2 --no-update
           fi
-
           if [ ${{ matrix.endtoend }} ]; then
             composer require silverstripe/recipe-testing:^2 --dev --no-update
           fi
@@ -290,7 +286,7 @@ jobs:
           cat composer.json
 
           # Installing using --prefer-source for recipes + some modules that run other unit-tests in other modules
-          composer update --prefer-source --no-interaction --no-progress ${{ matrix.composer_arg }}
+          composer update --prefer-source --no-interaction --no-progress ${{ matrix.composer_args }}
 
       - name: Final preparation
         run: |
