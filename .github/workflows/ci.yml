@@ -35,7 +35,7 @@ on:
 
 jobs:
 
-    context:
+  context:
     name: Context
     runs-on: ubuntu-latest
     env:
