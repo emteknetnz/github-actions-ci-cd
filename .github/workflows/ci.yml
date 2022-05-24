@@ -180,7 +180,6 @@ jobs:
               DirectoryIndex index.php index.html index.cgi index.pl index.xhtml index.htm
           </IfModule>
           EOF
-          # TODO: sudo cat and get rid of cp?
           sudo cp __dir.conf /etc/apache2/mods-enabled/dir.conf
           rm __dir.conf
           # this script will create a 000-default.conf file with the pwd as the DocumentRoot
@@ -196,7 +195,6 @@ jobs:
             CustomLog ${APACHE_LOG_DIR}/access.log combined
           </VirtualHost>
           EOF
-          # TODO: this could be replace with using bash a variable pwd/cwd straight into the inline php
           cat << EOF > __apache2.php
           <?php
           \$pwd = rtrim(trim(shell_exec('pwd')), '/');
@@ -268,7 +266,7 @@ jobs:
           fi
 
           # postgres
-          if [ "${{ matrix.db }}" == "pgsql" ] && ! [ "${{ github.repository }}"" == "silverstripe/silverstripe-postgresql" ]; then
+          if [ "${{ matrix.db }}" == "pgsql" ] && ! [ "${{ github.repository }}" == "silverstripe/silverstripe-postgresql" ]; then
             composer require silverstripe/postgres:^2 --no-update
           fi
 
