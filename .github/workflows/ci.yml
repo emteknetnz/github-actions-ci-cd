@@ -306,10 +306,10 @@ jobs:
           else
             cat << EOF > .env
           SS_DATABASE_CLASS="PostgreSQLDatabase"
-          SS_DATABASE_SERVER="127.0.0.1"
+          SS_DATABASE_SERVER="localhost"
           SS_DATABASE_PORT="5432"
           SS_DATABASE_USERNAME="postgres"
-          SS_DATABASE_PASSWORD="password"
+          SS_DATABASE_PASSWORD="postgres"
           EOF
           fi
           cat << EOF >> .env
