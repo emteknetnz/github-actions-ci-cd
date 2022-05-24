@@ -267,6 +267,11 @@ jobs:
             fi
           fi
 
+          # postgres
+          if [ "${{ matrix.db }}" == "pgsql" ] && ! [ "${{ github.repository }}"" == "silverstripe/silverstripe-postgresql" ]; then
+            composer require silverstripe/postgres:^2 --no-update
+          fi
+
           if [ ${{ matrix.endtoend }} ]; then
             composer require silverstripe/recipe-testing:^2 --dev --no-update
           fi
@@ -283,7 +288,7 @@ jobs:
           composer config allow-plugins.silverstripe/recipe-plugin true
           composer config allow-plugins.silverstripe/vendor-plugin true
           
-          #
+          # Useful to see generated composer.json when diagnosing new bugs
           cat composer.json
 
           # Installing using --prefer-source for recipes + some modules that run other unit-tests in other modules
@@ -294,19 +299,19 @@ jobs:
           # Add .env file and create artifacts directory
           if [[ "${{ matrix.db }}" =~ mysql ]]; then
             cat << EOF > .env
-            SS_DATABASE_CLASS="MySQLDatabase"
-            SS_DATABASE_SERVER="127.0.0.1"
-            SS_DATABASE_PORT="${{ matrix.db == 'mysql57' && '3357' || '3380' }}"
-            SS_DATABASE_USERNAME="root"
-            SS_DATABASE_PASSWORD="root"
+          SS_DATABASE_CLASS="MySQLDatabase"
+          SS_DATABASE_SERVER="127.0.0.1"
+          SS_DATABASE_PORT="${{ matrix.db == 'mysql57' && '3357' || '3380' }}"
+          SS_DATABASE_USERNAME="root"
+          SS_DATABASE_PASSWORD="root"
           EOF
           else
             cat << EOF > .env
-            SS_DATABASE_CLASS="PostgreSQLDatabase"
-            SS_DATABASE_SERVER="127.0.0.1"
-            SS_DATABASE_PORT="5432"
-            SS_DATABASE_USERNAME="postgres"
-            SS_DATABASE_PASSWORD="password"
+          SS_DATABASE_CLASS="PostgreSQLDatabase"
+          SS_DATABASE_SERVER="127.0.0.1"
+          SS_DATABASE_PORT="5432"
+          SS_DATABASE_USERNAME="postgres"
+          SS_DATABASE_PASSWORD="password"
           EOF
           fi
           cat << EOF >> .env
