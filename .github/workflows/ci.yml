@@ -35,6 +35,19 @@ on:
 
 jobs:
 
+  # TODO: delete this - it's only for debugging
+  context:
+    name: Context
+    runs-on: ubuntu-latest
+    steps:
+      - name: Context
+        run: |
+          # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
+          echo "github.base_ref: ${{ github.base_ref }}"
+          echo "github.head_ref: ${{ github.head_ref }}"
+          echo "github.ref: ${{ github.ref }}"
+          echo "github.ref_name: ${{ github.ref_name }}"
+
   genmatrix:
     name: Generate matrix
     runs-on: ubuntu-latest
@@ -228,9 +241,12 @@ jobs:
           COMPOSER_REQUIRE_EXTRA: ${{ inputs.composer_require_extra }}
         run: |
           # Update composer.json and install dependencies
-          # github.base_ref is only available on pull-requests and is the target branch - is is NOT prefixed with refs/heads/
-          # github.ref_name is used for regular branch builds such as crons - it is NOT prefixed with refs/heads/
+          # github.base_ref is only available on pull-requests events is the target branch - is is NOT prefixed with refs/heads/
+          # github.ref_name is used for regular branch builds on events push - it is NOT prefixed with refs/heads/
+          # github.ref_name is also the tag on tag events << TODO: confirm
           # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
+
+          # Note: $BRANCH will be tag for tag events
           BRANCH=$(php -r "echo preg_replace('#^pulls/([0-9\.]+)/.+\$#', '\$1', '${{ github.base_ref }}'?:'${{ github.ref_name }}');")
           if [[ "$BRANCH" =~ ^[1-9]$ ]] || [[ "$BRANCH" =~ ^[1-9]\.[0-9]+$ ]]; then export COMPOSER_ROOT_VERSION="${BRANCH}.x-dev"; elif [[ "$BRANCH" =~ ^[1-9]\.[0-9]+\.[0-9]+ ]]; then export COMPOSER_ROOT_VERSION="${BRANCH}"; else export COMPOSER_ROOT_VERSION="dev-${BRANCH}"; fi
           echo "BRANCH is $BRANCH"
@@ -277,6 +293,9 @@ jobs:
             composer require $COMPOSER_REQUIRE_EXTRA --no-update
           fi
 
+          # Ensure composer.json has prefer-stable true and minimum-stability dev
+          php -r '$j=json_decode(file_get_contents("composer.json"));$j->{"prefer-stable"}=true;$j->{"minimum-stability"}="dev";file_put_contents("composer.json",json_encode($j,192));'
+
           # Enable plugins
           composer config allow-plugins.composer/installers true
           composer config allow-plugins.silverstripe/recipe-plugin true
@@ -286,7 +305,27 @@ jobs:
           cat composer.json
 
           # Installing using --prefer-source for recipes + some modules that run other unit-tests in other modules
+          # matrix.composer_args is sometimes --prefer-lowest which is only supported by `composer update`, not `composer install`
+          # Modules do not have composer.lock files, so `composer update` is the same speed as `composer install`
           composer update --prefer-source --no-interaction --no-progress ${{ matrix.composer_args }}
+
+          # Useful to see what was installed
+          composer show
+
+          # Remove vendor unit tests files that were installed because of the use of --prefer-source
+          # Some older silverstripe vendor modules may still have the phpunit5 setUp() signatures without :void which when loaded will throw fatal PHP errors.
+          # We cannot simply get rid of the 'tests' folders because behat requires vendor/silverstripe/[framework|cms]/tests/behat/serve-bootstrap.php
+          # Recipes are excluded because the unit tests they run are in the required modules, and there's an assumption they'll require a compatible minor branch of the module
+          # Make an exception for 'ExtendTest.php' which is a misnamed TestOnly non-test class
+          RECIPE=$(php -r "echo preg_match('#^silverstripe/(recipe|silverstripe-installer)#', '$TRAVIS_REPO_SLUG')?1:0;")
+          echo "RECIPE - $RECIPE"
+          if [ $RECIPE == 0 ]; then php -r 'foreach (["silverstripe", "cwp", "symbiote", "dnadesign", "tractorcow", "bringyourownideas", "colymba"] as $v) { $d = "vendor/$v"; if (!is_dir($d)) continue; foreach (explode("\n", shell_exec("find $d | grep \/tests\/ | grep [a-zA-Z0-9]Test.php")) as $f) { if (preg_match("#ExtendTest\.php#", $f)) continue; if (is_file($f)) unlink($f); } }'; fi
+          # Also remove a few other file that don't match the *Test.php convention and extends SapphireTest
+          if [ $RECIPE == 0 ] && [ -f vendor/silverstripe/assets/tests/php/FilenameParsing/FileIDHelperTester.php ]; then rm vendor/silverstripe/assets/tests/php/FilenameParsing/FileIDHelperTester.php; fi
+          if [ $RECIPE == 0 ] && [ -f vendor/silverstripe/framework/tests/php/Forms/NullableFieldTests.php ]; then rm vendor/silverstripe/framework/tests/php/Forms/NullableFieldTests.php; fi
+          if [ $RECIPE == 0 ] && [ -f vendor/silverstripe/graphql/tests/Middleware/MiddlewareProcessTestBase.php ]; then rm vendor/silverstripe/graphql/tests/Middleware/MiddlewareProcessTestBase.php; fi
+          # Rebuild composer classloader
+          composer dumpautoload -o
 
       - name: Final preparation
         run: |
@@ -333,7 +372,7 @@ jobs:
 
           # Artifacts directory must be created after composer install as it would remove the artifacts directory
           mkdir artifacts
-          
+
           # run dev/build flush to help debug any issues (though it's not strictly required here)
           # travis-shared has no reference to sake, so it should be safe to omit dev/build flush=1
           # normal module
