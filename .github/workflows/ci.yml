@@ -35,17 +35,24 @@ on:
 
 jobs:
 
-  # TODO: delete this - it's only for debugging
-  context:
+    context:
     name: Context
     runs-on: ubuntu-latest
+    env:
+      # Put this through an env variable to prevent possible string substitution injection via pull-request branch name
+      GITHUB_HEAD_REF: ${{ github.head_ref }}
     steps:
       - name: Context
         run: |
           # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
+          # github.base_ref - The target branch of the pull request in a workflow run.
           echo "github.base_ref: ${{ github.base_ref }}"
-          echo "github.head_ref: ${{ github.head_ref }}"
+          # github.head_ref - The source branch of the pull request in a workflow run.
+          echo "github.head_ref: $GITHUB_HEAD_REF"
+          # github.ref - The branch or tag ref that triggered the workflow run. 
+          # For branches this is the format refs/heads/<branch_name>, and for tags it is refs/tags/<tag_name>
           echo "github.ref: ${{ github.ref }}"
+          # github.ref_name - The branch or tag name that triggered the workflow run
           echo "github.ref_name: ${{ github.ref_name }}"
 
   genmatrix:
@@ -152,21 +159,28 @@ jobs:
       - name: Configure PHP
         run: |
           # Set memory limit and disable xdebug if not running phpcoverage
-          if [ ! $(which php) ]; then echo "PHP not installed, skipping" && exit 0; fi
+          if [ -z $(which php) ]; then
+            echo "PHP not installed, skipping" && exit 0
+          fi
+
           # github linux runners have 7GB of RAM
           # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners
           # Set a high memory limit, particularly for php coverage tests
           PHP_MEMORY_LIMIT=6144M
           # Assign less memory for behat tests so that chrome has plenty of memory available
-          if [ ${{ matrix.endtoend }} ]; then PHP_MEMORY_LIMIT=4096M; fi
+          if ! [ -z ${{ matrix.endtoend }} ]; then
+            PHP_MEMORY_LIMIT=4096M
+          fi
           echo "PHP_MEMORY_LIMIT is $PHP_MEMORY_LIMIT"
+
           sudo sh -c "echo 'memory_limit = $PHP_MEMORY_LIMIT' >> /etc/php/${{ matrix.php }}/cli/php.ini"
           if [ -f /etc/php/${{ matrix.php }}/apache2/php.ini ]; then
             sudo sh -c "echo 'memory_limit = $PHP_MEMORY_LIMIT' >> /etc/php/${{ matrix.php }}/apache2/php.ini"
           fi
+
           # Disable xdebug which greatly slow down unit testing
           # Note: omitting xdebug from shivammathur/setup-php still results in xdebug being installed and enabled
-          if ! [ ${{ matrix.phpcoverage }} ]; then
+          if [ -z ${{ matrix.phpcoverage }} ]; then
             sudo sh -c "echo ';zend_extension=xdebug.so' > /etc/php/${{ matrix.php }}/mods-available/xdebug.ini"
           fi
           echo "PHP has been configured"
@@ -174,21 +188,20 @@ jobs:
       - name: Apt install additional requirements 
         run: |
           # apt install extra requirements as required
-          if [ ${{ matrix.endtoend }} ]; then
+          if ! [ -z ${{ matrix.endtoend }} ]; then
             sudo apt install -y software-properties-common
             sudo add-apt-repository -y ppa:ondrej/php
             sudo add-apt-repository -y ppa:ondrej/apache2
             sudo apt update
             sudo apt install -y libapache2-mod-php${{ matrix.php }}
-            # ubuntu-latest will install a current version of google-chrome-stable (currently 95)
-            # so there's no need to install chromium like we used to on travis-shared
+            # ubuntu-latest comes with a current version of google-chrome-stable and chromedriver
           fi
-          if [[ ${{ github.repository }} =~ /(spellcheck|recipe-authoring-tools)$ ]] || [ ${{ matrix.phpunit_suite }} == recipe-authoring-tools ]; then
+          if [[ "${{ github.repository }}" =~ /(spellcheck|recipe-authoring-tools)$ ]] || [ "${{ matrix.phpunit_suite }}" == "recipe-authoring-tools" ]; then
             sudo apt install -y hunspell libhunspell-dev hunspell-en-us
           fi
 
       - name: Configure apache - endtoend test
-        if: ${{ matrix.endtoend }}
+        if: ${{ matrix.endtoend == 'true' }}
         run: |
           # apache2 is installed and running by default in ubuntu
           # update dir.conf to use index.php as the primary index doc
@@ -258,7 +271,7 @@ jobs:
           # If so, then ensure sminnee phpunit5 modules do not get installed
           PHPUNIT9=$(php -r '$rd=json_decode(file_get_contents("composer.json"))->{"require-dev"};$pu=$rd->{"phpunit/phpunit"}??"";$rt=$rd->{"silverstripe/recipe-testing"}??"";echo ($pu=="^9"||$pu=="^9.5"||$rt=="^2")?1:0;')
           echo "PHPUNIT9 is $PHPUNIT9"
-          if [ $PHPUNIT9 == 1 ]; then
+          if [ "$PHPUNIT9" == "1" ]; then
             php -r "\$j=json_decode(file_get_contents('composer.json'));if(!property_exists(\$j,'replace')){\$j->replace=new stdClass();};\$j->replace->{'sminnee/phpunit'}='*';\$j->replace->{'sminnee/phpunit-mock-objects'}='*';file_put_contents('composer.json',json_encode(\$j, JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES));"
           fi
 
@@ -274,7 +287,7 @@ jobs:
           # require graphql 4 most of the time
           # require graphql 3 for endtoend tests on php 7.4
           if ! [[ ${{ github.repository }} =~ /graphql$ ]]; then
-            if [ ${{ matrix.endtoend }} ] && [ "${{ matrix.php }}" == "7.4" ]; then
+            if ! [ -z ${{ matrix.endtoend }} ] && [ "${{ matrix.php }}" == "7.4" ]; then
               composer require silverstripe/graphql:^3 --no-update
             else
               composer require silverstripe/graphql:^4 --no-update
@@ -284,10 +297,10 @@ jobs:
           if [ "${{ matrix.db }}" == "pgsql" ] && ! [[ "${{ github.repository }}" =~ /postgresql ]]; then
             composer require silverstripe/postgresql:^2 --no-update
           fi
-          if [ ${{ matrix.endtoend }} ]; then
+          if ! [ -z ${{ matrix.endtoend }} ]; then
             composer require silverstripe/recipe-testing:^2 --dev --no-update
           fi
-          if [ ${{ matrix.phplinting }} ]; then
+          if ! [ -z ${{ matrix.phplinting }} ]; then
             composer require silverstripe/cow:dev-master --dev --no-update
           fi
           if [ "$COMPOSER_REQUIRE_EXTRA" != "" ]; then
@@ -320,14 +333,22 @@ jobs:
           # Recipes are excluded because the unit tests they run are in the required modules, and there's an assumption they'll require a compatible minor branch of the module
           # Make an exception for 'ExtendTest.php' which is a misnamed TestOnly non-test class
           RECIPE=$(php -r "echo preg_match('#^silverstripe/(recipe|silverstripe-installer)#', '$TRAVIS_REPO_SLUG')?1:0;")
-          echo "RECIPE - $RECIPE"
-          if [ $RECIPE == 0 ]; then php -r 'foreach (["silverstripe", "cwp", "symbiote", "dnadesign", "tractorcow", "bringyourownideas", "colymba"] as $v) { $d = "vendor/$v"; if (!is_dir($d)) continue; foreach (explode("\n", shell_exec("find $d | grep \/tests\/ | grep [a-zA-Z0-9]Test.php")) as $f) { if (preg_match("#ExtendTest\.php#", $f)) continue; if (is_file($f)) unlink($f); } }'; fi
-          # Also remove a few other file that don't match the *Test.php convention and extends SapphireTest
-          if [ $RECIPE == 0 ] && [ -f vendor/silverstripe/assets/tests/php/FilenameParsing/FileIDHelperTester.php ]; then rm vendor/silverstripe/assets/tests/php/FilenameParsing/FileIDHelperTester.php; fi
-          if [ $RECIPE == 0 ] && [ -f vendor/silverstripe/framework/tests/php/Forms/NullableFieldTests.php ]; then rm vendor/silverstripe/framework/tests/php/Forms/NullableFieldTests.php; fi
-          if [ $RECIPE == 0 ] && [ -f vendor/silverstripe/graphql/tests/Middleware/MiddlewareProcessTestBase.php ]; then rm vendor/silverstripe/graphql/tests/Middleware/MiddlewareProcessTestBase.php; fi
-          # Rebuild composer classloader
-          composer dumpautoload -o
+          echo "RECIPE is $RECIPE"
+          if [ "$RECIPE" == "0" ]; then
+            php -r 'foreach (["silverstripe", "cwp", "symbiote", "dnadesign", "tractorcow", "bringyourownideas", "colymba"] as $v) { $d = "vendor/$v"; if (!is_dir($d)) continue; foreach (explode("\n", shell_exec("find $d | grep \/tests\/ | grep [a-zA-Z0-9]Test.php")) as $f) { if (preg_match("#ExtendTest\.php#", $f)) continue; if (is_file($f)) unlink($f); } }'
+            # Also remove a few other file that don't match the *Test.php convention and extends SapphireTest
+            if [ -f vendor/silverstripe/assets/tests/php/FilenameParsing/FileIDHelperTester.php ]; then
+              rm vendor/silverstripe/assets/tests/php/FilenameParsing/FileIDHelperTester.php
+            fi
+            if [ -f vendor/silverstripe/framework/tests/php/Forms/NullableFieldTests.php ]; then
+              rm vendor/silverstripe/framework/tests/php/Forms/NullableFieldTests.php
+            fi
+            if [ -f vendor/silverstripe/graphql/tests/Middleware/MiddlewareProcessTestBase.php ]; then
+              rm vendor/silverstripe/graphql/tests/Middleware/MiddlewareProcessTestBase.php
+            fi
+            # Rebuild composer classloader
+            composer dumpautoload -o
+          fi
 
       - name: Final preparation
         run: |
@@ -378,10 +399,14 @@ jobs:
           # run dev/build flush to help debug any issues (though it's not strictly required here)
           # travis-shared has no reference to sake, so it should be safe to omit dev/build flush=1
           # normal module
-          if [ -f vendor/bin/sake ]; then vendor/bin/sake dev/build flush=1; fi
+          if [ -f vendor/bin/sake ]; then
+            vendor/bin/sake dev/build flush=1
+          fi
           # framework module
-          if [ -f sake ]; then ./sake dev/build flush=1; fi
-          
+          if [ -f sake ]; then
+            ./sake dev/build flush=1
+          fi
+
           # Delete the silverstripe-cache dir - it will automatically recreate when needed
           # There were issues with a unit test getting the following issue
           # Identifier name 'SilverStripe_CampaignAdmin_Tests_AddToCampaignValidatorTest_TestObject' is too long
@@ -407,9 +432,15 @@ jobs:
         if: always()
         run: |
           # Copy selected files to the artifacts dir
-          if [ -f composer.json ]; then cp composer.json artifacts; fi
-          if [ -f composer.lock ]; then cp composer.lock artifacts; fi
-          if [ ${{ matrix.endtoend }} ] && [ -f behat.yml ]; then cp behat.yml artifacts; fi
+          if [ -f composer.json ]; then
+            cp composer.json artifacts
+          fi
+          if [ -f composer.lock ]; then
+            cp composer.lock artifacts
+          fi
+          if ! [ -z ${{ matrix.endtoend }} ] && [ -f behat.yml ]; then
+            cp behat.yml artifacts
+          fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # @v2
