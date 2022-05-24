@@ -61,8 +61,7 @@ jobs:
       fail-fast: false
       matrix: ${{fromJson(needs.genmatrix.outputs.matrix)}}
 
-    # using ubuntu 20.04 because was getting apache rate-limited (429) in behat
-    runs-on: ubuntu-focal
+    runs-on: ubuntu-latest
 
     services:
       mysql57:
