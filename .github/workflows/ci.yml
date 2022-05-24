@@ -115,11 +115,11 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2#7884fcad6b5d53d10323aee724dc68d8b9096a2e
+        uses: actions/checkout@7884fcad6b5d53d10323aee724dc68d8b9096a2e # @v2
 
       - name: Install PHP
         # SHA will need to be updated to support new php version when they are released
-        uses: shivammathur/setup-php@v2#6cba851606e69e00775ebccba68bc1d418b6fa44
+        uses: shivammathur/setup-php@6cba851606e69e00775ebccba68bc1d418b6fa44 # @v2
         with:
           php-version: ${{ matrix.php }}
           extensions: curl, dom, gd, intl, json, ldap, mbstring, mysql, tidy, xdebug, zip
@@ -218,7 +218,7 @@ jobs:
       # need to download requirements for the first time, after that it will be plenty quick
       # https://docs.github.com/en/actions/advanced-guides/caching-dependencies-to-speed-up-workflows
       - name: Enable shared composer cache
-        uses: actions/cache@v2#937d24475381cd9c75ae6db12cb4e79714b926ed
+        uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed # @v2
         with:
           path: ~/.cache/composer
           key: shared-composer-cache
@@ -362,7 +362,7 @@ jobs:
           if [ ${{ matrix.endtoend }} ] && [ -f behat.yml ]; then cp behat.yml artifacts; fi
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v2#82c141cc518b40d92cc801eee768e7aafc9c2fa2
+        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # @v2
         if: always()
         with:
           name: ${{ env.artifacts_name }}
