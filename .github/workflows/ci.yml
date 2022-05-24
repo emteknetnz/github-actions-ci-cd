@@ -314,6 +314,7 @@ jobs:
           EOF
           fi
           cat << EOF >> .env
+          SS_ENVIRONMENT_TYPE="dev"
           SS_DATABASE_NAME="SS_mysite"
           SS_DEFAULT_ADMIN_USERNAME="admin"
           SS_DEFAULT_ADMIN_PASSWORD="password"
