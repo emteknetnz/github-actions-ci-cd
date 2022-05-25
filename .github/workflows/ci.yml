@@ -285,7 +285,8 @@ jobs:
           
           # Required for assets unit tests as well as recipes that run assets unit tests
           # Should technically be defined as composer_require_extra on individual modules, though easier just doing here
-          composer require mikey179/vfsstream:^1.6 --dev --no-update
+          # 1.6.10 is for --prefer-lowest and is the minimum version with php 8.1 support
+          composer require mikey179/vfsstream:^1.6.10 --dev --no-update
 
           # require graphql 4 most of the time
           # require graphql 3 for endtoend tests on php 7.4
