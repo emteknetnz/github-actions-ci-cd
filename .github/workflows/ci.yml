@@ -127,6 +127,7 @@ jobs:
         ${{ matrix.js == 'true' && 'js' || '' }}
         ${{ matrix.phpcoverage == 'true' && 'phpcoverage' || '' }}
         ${{ matrix.phplinting == 'true' && 'phplinting' || '' }}
+        ${{ matrix.name_suffix }}
 
     name: >-
       PHP ${{ matrix.php }}
@@ -139,6 +140,7 @@ jobs:
       ${{ matrix.js == 'true' && 'js' || '' }}
       ${{ matrix.phpcoverage == 'true' && 'phpcoverage' || '' }}
       ${{ matrix.phplinting == 'true' && 'phplinting' || '' }}
+      ${{ matrix.name_suffix }}
 
     steps:
       - name: Checkout code
