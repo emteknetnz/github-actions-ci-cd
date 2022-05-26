@@ -288,16 +288,6 @@ jobs:
           # 1.6.10 is for --prefer-lowest and is the minimum version with php 8.1 support
           composer require mikey179/vfsstream:^1.6.10 --dev --no-update
 
-          # require graphql 4 most of the time
-          # require graphql 3 for endtoend tests on php 7.4
-          if ! [[ ${{ github.repository }} =~ /graphql$ ]]; then
-            if [ "${{ matrix.endtoend }}" == "true" ] && [ "${{ matrix.php }}" == "7.4" ]; then
-              composer require silverstripe/graphql:^3 --no-update
-            else
-              composer require silverstripe/graphql:^4 --no-update
-            fi
-          fi
-
           if [ "${{ matrix.db }}" == "pgsql" ] && ! [[ "${{ github.repository }}" =~ /postgresql ]]; then
             composer require silverstripe/postgresql:^2 --no-update
           fi
