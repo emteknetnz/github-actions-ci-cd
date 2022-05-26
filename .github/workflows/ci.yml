@@ -421,7 +421,7 @@ jobs:
           echo "matrix.phpunit: ${{ matrix.phpunit }}"
 
       - name: Run tests
-        uses: emteknetnz/gha-run-tests@main
+        uses: emteknetnz/gha-run-tests@cbe584aca9c7d88a2797acc91557fda6040ddb32 #main
         with:
           phpunit: ${{ matrix.phpunit }}
           phpunit_suite: ${{ matrix.phpunit_suite }}
