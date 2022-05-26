@@ -120,25 +120,25 @@ jobs:
         PHP ${{ matrix.php }}
         ${{ matrix.composer_args == '--prefer-lowest' && 'prf-low' || '' }}
         ${{ matrix.db }}
-        ${{ matrix.phpunit && 'phpunit' || '' }}
-        ${{ matrix.phpunit && matrix.phpunit_suite || '' }}
-        ${{ matrix.endtoend && 'endtoend' || '' }}
-        ${{ matrix.endtoend && matrix.endtoend_suite || '' }}
-        ${{ matrix.js && 'js' || '' }}
-        ${{ matrix.phpcoverage && 'phpcoverage' || '' }}
-        ${{ matrix.phplinting && 'phplinting' || '' }}
+        ${{ matrix.phpunit == 'true' && 'phpunit' || '' }}
+        ${{ matrix.phpunit == 'true' && matrix.phpunit_suite || '' }}
+        ${{ matrix.endtoend == 'true' && 'endtoend' || '' }}
+        ${{ matrix.endtoend == 'true' && matrix.endtoend_suite || '' }}
+        ${{ matrix.js == 'true' && 'js' || '' }}
+        ${{ matrix.phpcoverage == 'true' && 'phpcoverage' || '' }}
+        ${{ matrix.phplinting == 'true' && 'phplinting' || '' }}
 
     name: >-
       PHP ${{ matrix.php }}
       ${{ matrix.composer_args == '--prefer-lowest' && 'prf-low' || '' }}
       ${{ matrix.db }}
-      ${{ matrix.phpunit && 'phpunit' || '' }}
-      ${{ matrix.phpunit && matrix.phpunit_suite || '' }}
-      ${{ matrix.endtoend && 'endtoend' || '' }}
-      ${{ matrix.endtoend && matrix.endtoend_suite || '' }}
-      ${{ matrix.js && 'js' || '' }}
-      ${{ matrix.phpcoverage && 'phpcoverage' || '' }}
-      ${{ matrix.phplinting && 'phplinting' || '' }}
+      ${{ matrix.phpunit == 'true' && 'phpunit' || '' }}
+      ${{ matrix.phpunit == 'true' && matrix.phpunit_suite || '' }}
+      ${{ matrix.endtoend == 'true' && 'endtoend' || '' }}
+      ${{ matrix.endtoend == 'true' && matrix.endtoend_suite || '' }}
+      ${{ matrix.js == 'true' && 'js' || '' }}
+      ${{ matrix.phpcoverage == 'true' && 'phpcoverage' || '' }}
+      ${{ matrix.phplinting == 'true' && 'phplinting' || '' }}
 
     steps:
       - name: Checkout code
