@@ -13,9 +13,12 @@ on:
         required: false
         default: ''
       # simple matrix will only run a single php 7.4 mysql 5.7 job instead of a full matrix
+      # TODO: change to matrix_options - 'simple disabled' space separated, allows for future config
+      # disabled would have no auto generated and only output extra_jobs
       simple_matrix:
         type: boolean
         default: false
+      # TODO: remove the 'run_' suffixes so that it's consistent with syntax in 'extra_jobs'
       run_endtoend:
         type: boolean
         default: true
