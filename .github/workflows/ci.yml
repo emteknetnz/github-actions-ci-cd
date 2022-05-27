@@ -18,21 +18,20 @@ on:
       simple_matrix:
         type: boolean
         default: false
-      # TODO: remove the 'run_' suffixes so that it's consistent with syntax in 'extra_jobs'
-      run_endtoend:
+      endtoend:
         type: boolean
         default: true
-      run_phpcoverage:
+      phpcoverage:
         type: boolean
         # modules on silverstripe account will ignore this and always run codecov
         default: false
-      run_phplinting:
+      phplinting:
         type: boolean
         default: true
-      run_phpunit:
+      phpunit:
         type: boolean
         default: true
-      run_js:
+      js:
         type: boolean
         default: true
 
@@ -74,11 +73,11 @@ jobs:
         with:
           extra_jobs: ${{ inputs.extra_jobs }}
           simple_matrix: ${{ inputs.simple_matrix }}
-          run_endtoend: ${{ inputs.run_endtoend }}
-          run_phpcoverage: ${{ inputs.run_phpcoverage }}
-          run_phplinting: ${{ inputs.run_phplinting }}
-          run_phpunit: ${{ inputs.run_phpunit }}
-          run_js: ${{ inputs.run_js }}
+          endtoend: ${{ inputs.endtoend }}
+          phpcoverage: ${{ inputs.phpcoverage }}
+          phplinting: ${{ inputs.phplinting }}
+          phpunit: ${{ inputs.phpunit }}
+          js: ${{ inputs.js }}
 
   tests:
     needs: genmatrix
