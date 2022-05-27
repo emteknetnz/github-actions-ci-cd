@@ -442,8 +442,8 @@ jobs:
           if [ -f composer.lock ]; then
             cp composer.lock artifacts
           fi
-          if [ "${{ matrix.endtoend }}" == "true" ] && [ -f behat.yml ]; then
-            cp behat.yml artifacts
+          if [ "${{ matrix.endtoend }}" == "true" ] && [ -f __behat.yml ]; then
+            cp __behat.yml artifacts
           fi
 
       - name: Upload artifacts
